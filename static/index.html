@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oracle A1 Hunter</title>
+<style>
+:root{
+  --bg:#0b0f14; --panel:#121822; --panel2:#0e141d; --border:#1e2937;
+  --text:#dbe4ee; --muted:#7b8ba1; --accent:#f97066; --accent2:#34d399;
+  --blue:#60a5fa; --amber:#fbbf24; --red:#f87171; --green:#34d399;
+  --logbg:#05080c; --shadow:rgba(0,0,0,.35); --hover:#1a2432;
+}
+html[data-theme="light"]{
+  --bg:#eef2f7; --panel:#ffffff; --panel2:#f6f8fb; --border:#d7dfeb;
+  --text:#17222f; --muted:#5c6b80; --logbg:#f7fafd; --shadow:rgba(23,34,47,.12); --hover:#eef2f8;
+  --amber:#b45309; --red:#dc2626; --green:#059669; --blue:#2563eb;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]):not([data-theme="light"]){
+    --bg:#eef2f7; --panel:#ffffff; --panel2:#f6f8fb; --border:#d7dfeb;
+    --text:#17222f; --muted:#5c6b80; --logbg:#f7fafd; --shadow:rgba(23,34,47,.12); --hover:#eef2f8;
+    --amber:#b45309; --red:#dc2626; --green:#059669; --blue:#2563eb;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,"Segoe UI",Roboto,Inter,sans-serif;padding:16px}
+a{color:var(--blue)}
+h1{font-size:18px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+.wrap{max-width:980px;margin:0 auto}
+header{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.badge{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;background:var(--panel);border:1px solid var(--border)}
+.badge.HUNTING{color:var(--green);border-color:var(--green)} .badge.BACKOFF{color:var(--amber);border-color:var(--amber)}
+.badge.PAUSED_BATTERY,.badge.PAUSED_OFFLINE{color:var(--amber);border-color:var(--amber)}
+.badge.NEEDS_CONFIG,.badge.STOPPED{color:var(--muted)} .badge.ERROR{color:var(--red);border-color:var(--red)}
+.badge.FOUND,.badge.COMPLETE{color:var(--green);border-color:var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{50%{opacity:.55}}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 1px 3px var(--shadow)}
+.card .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:5px}
+.card .v{font-size:22px;font-weight:700;margin-top:2px}
+.card .s{font-size:11px;color:var(--muted);margin-top:2px;min-height:14px;word-break:break-all}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+button{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-weight:600;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:7px}
+button:hover{border-color:var(--blue);background:var(--hover)} button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:#1d4ed8;border-color:#2563eb;color:#fff}
+button.danger{border-color:#7f1d1d} button.danger:hover{border-color:var(--red)}
+.panel{background:var(--panel2);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden}
+.panel .hd{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.tabs{display:flex;gap:4px;margin-bottom:14px}
+.tabs button{border-radius:8px 8px 0 0;border-bottom:none;padding:8px 18px}
+.tabs button.on{background:var(--panel);border-color:var(--border);color:var(--accent)}
+#logs{background:var(--logbg);padding:12px;font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;height:420px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;border-top:1px solid var(--border)}
+.l-ERROR{color:var(--red)} .l-WARN,.l-CAPACITY{color:var(--amber)} .l-SUCCESS{color:var(--green)} .l-INFO{color:var(--text)}
+.hit{font-weight:700}
+input,select,textarea{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:7px 10px;font-size:13px;width:100%;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+textarea{min-height:110px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5}
+.cfgform{padding:14px} .grp{margin-bottom:16px} .grp h3{font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.frow{display:grid;grid-template-columns:230px 1fr;gap:10px;align-items:start;margin-bottom:8px}
+.frow label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:6px}
+.frow .hint{font-size:11px;color:var(--muted);opacity:.7;width:100%}
+.warnbox{background:rgba(251,191,36,.08);border:1px solid var(--amber);color:var(--amber);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start}
+.okbox{background:rgba(52,211,153,.08);border:1px solid var(--green);color:var(--green);border-radius:10px;padding:12px 14px;margin-bottom:14px;word-break:break-all;display:flex;gap:8px;align-items:flex-start}
+#login{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:99}
+#login[hidden]{display:none}
+#login .box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px;width:min(360px,90vw);box-shadow:0 10px 40px var(--shadow)}
+#login h2{margin-bottom:6px;font-size:16px;display:flex;align-items:center;gap:8px} #login p{color:var(--muted);font-size:12px;margin-bottom:14px}
+#login input{margin-bottom:12px}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid var(--muted);border-top-color:var(--green);border-radius:50%;animation:r 1s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+.rowline{display:flex;justify-content:space-between;padding:6px 14px;border-bottom:1px solid var(--border);font-size:13px;gap:10px}
+.rowline:last-child{border-bottom:none} .rowline b{font-weight:600;text-align:right}
+.ic{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ic.lg{width:20px;height:20px}
+/* info tooltip */
+.iinfo{position:relative;display:inline-flex;cursor:help;color:var(--muted)}
+.iinfo .ic{width:13px;height:13px}
+.iinfo::after{content:attr(data-tip);position:absolute;left:0;bottom:135%;background:var(--panel);color:var(--text);border:1px solid var(--border);padding:8px 11px;border-radius:8px;width:min(280px,70vw);opacity:0;pointer-events:none;transition:opacity .15s;font-size:12px;line-height:1.45;z-index:60;box-shadow:0 6px 20px var(--shadow);font-weight:400;text-transform:none;letter-spacing:0}
+.iinfo:hover::after,.iinfo:focus::after{opacity:1}
+/* theme switcher */
+.themesw{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-left:auto}
+.themesw button{border:none;border-radius:0;padding:7px 10px;background:transparent}
+.themesw button.on{background:var(--hover);color:var(--accent)}
+/* telegram helpers */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
+.chips button{padding:3px 9px;font-size:11px;border-radius:999px;font-family:ui-monospace,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <div class="box">
+    <h2><span data-ic="crosshair" class="lg"></span> Oracle A1 Hunter</h2>
+    <p>Enter the authentication token (it lives in <code>config.env</code> → <code>AUTH_TOKEN</code> on the phone, or in your deployment notes).</p>
+    <input id="tokInput" type="password" placeholder="token…" autocomplete="off">
+    <button class="primary" onclick="saveToken()" style="width:100%">Sign in</button>
+    <p id="loginErr" style="color:var(--red);margin-top:8px"></p>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <h1><span data-ic="crosshair" class="lg"></span> Oracle A1 Hunter</h1>
+    <span class="badge" id="stBadge">…</span>
+    <span style="color:var(--muted);font-size:12px" id="ver"></span>
+    <span class="themesw" role="group" aria-label="Theme">
+      <button id="thSys" onclick="setTheme('system')" title="Follow system"><span data-ic="monitor"></span></button>
+      <button id="thLight" onclick="setTheme('light')" title="Light"><span data-ic="sun"></span></button>
+      <button id="thDark" onclick="setTheme('dark')" title="Dark"><span data-ic="moon"></span></button>
+    </span>
+  </header>
+
+  <div id="setupWarn"></div>
+
+  <div class="cards">
+    <div class="card"><div class="k"><span data-ic="uptime"></span> Status</div><div class="v" id="cState" style="font-size:16px">—</div><div class="s" id="cStateSub"></div></div>
+    <div class="card"><div class="k"><span data-ic="zap"></span> Attempts</div><div class="v" id="cChecks">0</div><div class="s" id="cChecksSub"></div></div>
+    <div class="card"><div class="k"><span data-ic="clock"></span> Next attempt</div><div class="v" id="cNext" style="font-size:18px">—</div><div class="s" id="cNextSub"></div></div>
+    <div class="card"><div class="k"><span data-ic="battery"></span> Battery</div><div class="v" id="cBatt">—</div><div class="s" id="cBattSub"></div></div>
+    <div class="card"><div class="k"><span data-ic="wifi"></span> Network</div><div class="v" style="font-size:16px" id="cNet">—</div><div class="s" id="cNetSub"></div></div>
+    <div class="card"><div class="k"><span data-ic="clock"></span> Hunter uptime</div><div class="v" style="font-size:18px" id="cUp">—</div><div class="s" id="cUpSub"></div></div>
+    <div class="card"><div class="k"><span data-ic="cpu"></span> Memory</div><div class="v" id="cMem">—</div><div class="s">constant by design</div></div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="btnStart" onclick="ctrl('start')"><span data-ic="play"></span> Start</button>
+    <button class="danger" id="btnStop" onclick="ctrl('stop')"><span data-ic="pause"></span> Stop</button>
+    <button onclick="ctrl('restart')"><span data-ic="rotate"></span> Restart</button>
+    <button onclick="ctrl('checknow')"><span data-ic="zap"></span> Check now</button>
+  </div>
+
+  <div class="panel">
+    <div class="hd"><span style="display:flex;align-items:center;gap:7px"><span data-ic="crosshair"></span> Hunt target</span></div>
+    <div id="targetInfo"><div class="rowline"><span>loading…</span></div></div>
+  </div>
+
+  <div class="tabs">
+    <button id="tabLogs" class="on" onclick="tab('logs')"><span data-ic="file"></span> Live logs</button>
+    <button id="tabCfg" onclick="tab('cfg')"><span data-ic="settings"></span> Config</button>
+  </div>
+
+  <div id="viewLogs">
+    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
+      <input id="logFilter" placeholder="filter logs…" style="width:200px" oninput="renderLogs()">
+      <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="autoScroll" checked style="width:auto"> auto-scroll
+      </label>
+      <span id="sseState" style="font-size:11px;color:var(--muted)"></span>
+      <button style="margin-left:auto" onclick="logsBuf=[];renderLogs()"><span data-ic="x"></span> Clear view</button>
+    </div>
+    <div class="panel"><div id="logs"></div></div>
+  </div>
+
+  <div id="viewCfg" hidden>
+    <div class="panel"><div class="cfgform" id="cfgForm">loading…</div>
+      <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="primary" onclick="saveCfg()"><span data-ic="save"></span> Save & apply</button>
+        <button id="btnTgTest" onclick="tgTest()"><span data-ic="send"></span> Send Telegram test</button>
+        <span style="font-size:12px;color:var(--muted)" id="cfgMsg"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- inline SVG icons (Feather-style, no external deps) ---------- */
+const ICONS={
+crosshair:'<circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>',
+play:'<polygon points="5 3 19 12 5 21 5 3"/>',
+pause:'<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>',
+rotate:'<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+lock:'<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+info:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+sun:'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+monitor:'<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
+send:'<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+check:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+warn:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+wifi:'<path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>',
+clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+battery:'<rect x="1" y="6" width="18" height="12" rx="2" ry="2"/><line x1="23" y1="13" x2="23" y2="11"/>',
+uptime:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+cpu:'<rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="19" x2="9" y2="22"/><line x1="15" y1="19" x2="15" y2="22"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>',
+x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+};
+function icon(n,cls){return `<svg class="ic ${cls||''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`}
+document.querySelectorAll('[data-ic]').forEach(el=>{el.innerHTML=icon(el.dataset.ic,el.className.includes('lg')?'lg':'')});
+
+/* ---------- theme ---------- */
+function setTheme(t){
+  localStorage.setItem('oh_theme',t);
+  if(t==='system'){delete document.documentElement.dataset.theme}
+  else{document.documentElement.dataset.theme=t}
+  document.getElementById('thSys').classList.toggle('on',t==='system');
+  document.getElementById('thLight').classList.toggle('on',t==='light');
+  document.getElementById('thDark').classList.toggle('on',t==='dark');
+}
+setTheme(localStorage.getItem('oh_theme')||'system');
+
+/* ---------- api ---------- */
+let TOK=localStorage.getItem('oh_token')||'';
+let logsBuf=[], sse=null, cfgFields=null, lastTplBox=null;
+function api(path,opt){
+  const o=Object.assign({headers:{'X-Auth-Token':TOK}},opt||{});
+  return fetch(path,o).then(r=>{
+    if(r.status===401){showLogin();throw new Error('unauthorized')}
+    return r.json();
+  });
+}
+function showLogin(){document.getElementById('login').hidden=false}
+function saveToken(){
+  TOK=document.getElementById('tokInput').value.trim();
+  localStorage.setItem('oh_token',TOK);
+  api('/api/status').then(()=>{document.getElementById('login').hidden=true;
+    document.getElementById('loginErr').textContent='';
+    startSSE();poll();}).catch(()=>{document.getElementById('loginErr').textContent='Wrong token / hunter not running'});
+}
+document.getElementById('tokInput').addEventListener('keydown',e=>{if(e.key==='Enter')saveToken()});
+
+function fmtDur(s){s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  return h>0?`${h}h ${m}m`:m>0?`${m}m ${x}s`:`${x}s`}
+function ago(t,now){if(!t||isNaN(t))return '—';return fmtDur((now-t)/1000)+' ago'}
+
+function poll(){
+  api('/api/status').then(st=>{
+    document.getElementById('ver').textContent='v'+st.version;
+    const b=document.getElementById('stBadge');
+    b.textContent=st.state; b.className='badge '+st.state;
+    document.getElementById('cState').textContent=st.state;
+    document.getElementById('cStateSub').textContent=st.stats.lastResult||'';
+    document.getElementById('cChecks').textContent=st.stats.checks||0;
+    document.getElementById('cChecksSub').textContent=`${st.stats.capacityMiss||0} out of capacity · ${st.stats.rateLimited||0}×429 · ${st.stats.errors||0} errors`;
+    const now=new Date(st.now), nxt=new Date(st.stats.nextCheckAt||0);
+    if(st.state==='FOUND'||st.state==='COMPLETE'){document.getElementById('cNext').textContent='—';document.getElementById('cNextSub').textContent='done'}
+    else if(nxt>now){document.getElementById('cNext').textContent=fmtDur((nxt-now)/1000);
+      document.getElementById('cNextSub').textContent='base '+st.settings.intervalBase+'s'+(st.settings.intervalJitter>0?' + jitter':'')}
+    else{document.getElementById('cNext').textContent='…';document.getElementById('cNextSub').textContent='soon'}
+    document.getElementById('cBatt').textContent=st.battery>=0?st.battery+'%':'?';
+    document.getElementById('cBattSub').textContent='pause < '+st.settings.batteryMinPct+'%';
+    document.getElementById('cNet').textContent=st.online?(st.wifi?'Wi-Fi ✓':'Mobile data'+(st.settings.wifiOnly?' (needs Wi-Fi)':'')):'offline';
+    document.getElementById('cUp').textContent=st.running?fmtDur((now-new Date(st.stats.startedAt))/1000):'stopped';
+    document.getElementById('cMem').textContent=st.memoryMB>=0?st.memoryMB+' MB':'—';
+    document.getElementById('cUpSub').textContent=st.stats.lastCheckAt?('last attempt '+ago(st.stats.lastCheckAt,now)):'';
+
+    const btnS=document.getElementById('btnStart'),btnX=document.getElementById('btnStop');
+    btnS.disabled=st.running||st.state==='FOUND'||st.state==='COMPLETE';
+    btnX.disabled=!st.running;
+
+    const warn=document.getElementById('setupWarn');
+    if(st.found){
+      warn.innerHTML=`<div class="okbox">${icon('check')}<span><b>${esc(st.found.name)}</b> secured ${ago(st.found.foundAt,now)} — IP: <b>${esc(st.found.ip||'not ready yet')}</b><br>login: <code>ssh ubuntu@${esc((st.found.ip||'').split(' ')[0])}</code><br><span style="font-size:11px;opacity:.8">${esc(st.found.ocid)}</span></span></div>`+warn.innerHTML;
+    } else if(!st.credsComplete){
+      warn.innerHTML=`<div class="warnbox">${icon('warn')}<span>Credentials incomplete: <b>${esc((st.missing||[]).join(', '))}</b> — fill them in on the Config tab (or edit config.env on the phone), then press Start.</span></div>`;
+    } else warn.innerHTML='';
+
+    const t=st.target||{};
+    const shape=(t.targetOcpus!=null&&t.targetOcpus>0)?`${t.targetOcpus} OCPU / ${t.targetMemGb} GB · ${esc('VM.Standard.A1.Flex')}`:'—';
+    document.getElementById('targetInfo').innerHTML=[
+      ['Tenancy',t.tenancyName||'—'],['Region / AD',t.ad||'—'],
+      ['Shape',shape],
+      ['Image',t.imageName||'—'],['Discovery',t.discovered?'done ✓':'pending (next cycle)']
+    ].map(r=>`<div class="rowline"><span>${r[0]}</span><b>${esc(r[1])}</b></div>`).join('');
+  }).catch(()=>{});
+}
+setInterval(poll,4000);
+
+/* ---------- logs (SSE) ---------- */
+function startSSE(){
+  if(sse)sse.close();
+  sse=new EventSource('/api/logs/stream?token='+encodeURIComponent(TOK));
+  sse.onopen=()=>{document.getElementById('sseState').innerHTML='<span class="spin"></span> live'};
+  sse.onerror=()=>{document.getElementById('sseState').textContent='disconnected (phone asleep?) — reconnecting…'};
+  sse.onmessage=e=>{logsBuf.push(e.data);if(logsBuf.length>1500)logsBuf.splice(0,logsBuf.length-1500);renderLogs()};
+}
+function renderLogs(){
+  const el=document.getElementById('logs'),f=document.getElementById('logFilter').value.toLowerCase();
+  const lines=logsBuf.filter(l=>!f||l.toLowerCase().includes(f));
+  el.innerHTML=lines.map(l=>{
+    let cls='l-INFO';
+    if(l.includes('[ERROR]'))cls='l-ERROR';
+    else if(l.includes('[CAPACITY]'))cls='l-CAPACITY';
+    else if(l.includes('[SUCCESS]'))cls='l-SUCCESS';
+    else if(l.includes('[WARN]'))cls='l-WARN';
+    if(l.includes('***'))cls+=' hit';
+    return `<div class="${cls}">${esc(l)}</div>`;
+  }).join('');
+  if(document.getElementById('autoScroll').checked)el.scrollTop=el.scrollHeight;
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+
+function ctrl(a){api('/api/control',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':TOK},body:JSON.stringify({action:a})})
+  .then(r=>{if(r.error)alert(r.error)}).catch(()=>{}).then(()=>setTimeout(poll,600))}
+
+/* ---------- config ---------- */
+const TPL_PLACEHOLDERS=['{sum}','{capacity}','{rate_limited}','{errors}','{uptime}','{battery}','{region}','{target}','{time}','{name}','{ip}','{ocid}'];
+function tab(t){
+  document.getElementById('viewLogs').hidden=t!=='logs';
+  document.getElementById('viewCfg').hidden=t!=='cfg';
+  document.getElementById('tabLogs').classList.toggle('on',t==='logs');
+  document.getElementById('tabCfg').classList.toggle('on',t==='cfg');
+  if(t==='cfg')loadCfg();
+}
+function loadCfg(){
+  api('/api/config').then(r=>{
+    cfgFields=r.fields;
+    const groups={};
+    r.fields.forEach(f=>{(groups[f.group]=groups[f.group]||[]).push(f)});
+    let html='';
+    for(const g in groups){
+      html+=`<div class="grp"><h3>${esc(g)}</h3>`+groups[g].map(f=>{
+        const info=f.info?`<span class="iinfo" tabindex="0" data-tip="${esc(f.info)}">${icon('info')}</span>`:'';
+        const lockIco=f.secret?icon('lock'):'';
+        let input='';
+        if(f.type==='bool'){
+          input=`<select data-k="${f.key}"><option value="true"${f.value==='true'?' selected':''}>true</option><option value="false"${f.value==='false'?' selected':''}>false</option></select>`;
+        }else if(f.type==='textarea'){
+          input=`<textarea data-k="${f.key}" data-tpl="1">${esc(f.value)}</textarea>
+          <div class="chips">${TPL_PLACEHOLDERS.map(p=>`<button type="button" onclick="insertTpl(this,'${p}')">${p}</button>`).join('')}</div>`;
+        }else{
+          input=`<input data-k="${f.key}" type="${f.secret?'password':'text'}" value="${esc(f.value)}">`;
+        }
+        return `<div class="frow"><label>${lockIco} ${esc(f.label)} ${info}<div class="hint">${esc(f.hint||'')}</div></label>
+        <div>${input}</div></div>`;
+      }).join('')+'</div>';
+    }
+    document.getElementById('cfgForm').innerHTML=html;
+    document.querySelectorAll('#cfgForm textarea[data-tpl]').forEach(t=>{
+      t.addEventListener('focus',()=>{lastTplBox=t});
+    });
+  });
+}
+function insertTpl(btn,p){
+  const t=lastTplBox; if(!t){document.getElementById('cfgMsg').textContent='click into a template box first';return}
+  const s=t.selectionStart||0,e=t.selectionEnd||0;
+  t.value=t.value.slice(0,s)+p+t.value.slice(e);
+  t.focus();t.selectionStart=t.selectionEnd=s+p.length;
+  document.getElementById('cfgMsg').textContent='';
+}
+function saveCfg(){
+  const out={};
+  document.querySelectorAll('#cfgForm input,#cfgForm select,#cfgForm textarea').forEach(i=>out[i.dataset.k]=i.value);
+  api('/api/config',{method:'POST',headers:{'Content-Type':'application/json','X-Auth-Token':TOK},body:JSON.stringify(out)})
+    .then(r=>{document.getElementById('cfgMsg').textContent=r.ok?'saved ✓':'failed: '+(r.error||'')})
+    .catch(()=>document.getElementById('cfgMsg').textContent='network error');
+}
+function tgTest(){
+  const btn=document.getElementById('btnTgTest'),msg=document.getElementById('cfgMsg');
+  btn.disabled=true;msg.textContent='sending…';
+  api('/api/telegram/test',{method:'POST',headers:{'X-Auth-Token':TOK}})
+    .then(r=>{msg.textContent=r.ok?'test message sent ✓ — check Telegram':'failed: '+(r.error||'')})
+    .catch(e=>msg.textContent='failed: '+e)
+    .finally(()=>btn.disabled=false);
+}
+
+/* URL token login: #token=xxx — auto store & sign in without typing */
+(function(){
+  const m=location.hash.match(/token=([a-f0-9]{8,64})/i);
+  if(m){TOK=m[1];localStorage.setItem('oh_token',TOK);history.replaceState(null,'','/');}
+})();
+if(TOK){api('/api/status').then(()=>{document.getElementById('login').hidden=true;startSSE();poll()}).catch(()=>{showLogin()})}else showLogin();
+</script>
+</body>
+</html>

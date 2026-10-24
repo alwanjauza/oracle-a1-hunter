@@ -1,0 +1,16 @@
+# binaries
+hunter
+oraclehunter
+*.exe
+
+# secrets & runtime state — never commit
+*.pem
+secrets/
+config.env
+stats.json
+logs/
+*.log
+
+# local artifacts
+deploy/
+*.png.orig
