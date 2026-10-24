@@ -42,7 +42,7 @@ Existing hunters (including the one this project replaced) are Termux scripts th
 
 ## Try it (no Go toolchain needed)
 
-Grab a prebuilt binary from [**Releases**](../../releases) — `hunter-android-arm64` for phones, `hunter-linux-arm64`/`hunter-linux-amd64` for servers or SBCs — then follow the [Install](#install-rooted-android-kernelsu-or-magisk) steps below, skipping the build. A ready-made boot script lives at [`scripts/99-oracle-hunter.sh`](scripts/99-oracle-hunter.sh) and an annotated config template at [`config.env.example`](config.env.example).
+Grab a prebuilt binary from [**Releases**](../../releases) — `hunter-android-arm64` for phones, `hunter-linux-arm64`/`hunter-linux-amd64` for servers or SBCs — then follow the [Install](#install-rooted-android-kernelsu-or-magisk) steps below, skipping the build. A ready-made boot script lives at [`scripts/99-oracle-hunter.sh`](scripts/99-oracle-hunter.sh) and an annotated config template at [`config.env.example`](config.env.example). Version history: [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Install (rooted Android, KernelSU or Magisk)
 
