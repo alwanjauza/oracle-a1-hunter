@@ -106,6 +106,18 @@ func (t *AlarmTimer) WaitCh() <-chan error {
 	return ch
 }
 
+// Cancel releases a pending WaitCh reader: it expires the timer after 1 ms
+// so the blocked read returns promptly. A zero re-arm would NOT work —
+// disarming a timerfd does not wake readers already blocked on it, and a
+// stray reader left behind races the next cycle's reader for a single
+// expiration (the loser then blocks forever on a disarmed timer).
+func (t *AlarmTimer) Cancel() {
+	if t == nil || t.broken {
+		return
+	}
+	_ = t.Set(time.Millisecond)
+}
+
 func (t *AlarmTimer) Close() error {
 	return syscall.Close(t.fd)
 }

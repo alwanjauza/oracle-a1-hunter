@@ -378,6 +378,12 @@ func (h *Hunter) sleepInterruptible(alarm *AlarmTimer, d time.Duration) bool {
 			return true
 		case c := <-ctrl:
 			if c == "checknow" {
+				// Returning here would leave this sleep's alarm reader
+				// blocked on the fd; the next cycle spawns another reader and
+				// a single expiration can wake only one of the two. Fire the
+				// 1 ms fuse so the old reader exits first. (This exact race
+				// froze overnight hunts in v1.0.0 — see Cancel in alarm.go.)
+				alarm.Cancel()
 				return false
 			}
 			if c == "stop" {

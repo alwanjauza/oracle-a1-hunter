@@ -15,7 +15,7 @@ import (
 	_ "time/tzdata"
 )
 
-const version = "1.0.0"
+const version = "1.0.1"
 
 // init reads the device timezone straight from getprop so logs use local
 // time. time.Local is set explicitly because its eager initialization
