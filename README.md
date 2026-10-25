@@ -12,7 +12,7 @@ Written as a **single static Go binary (~8 MB, ~14 MB RAM)** that runs as a root
 
 | Dashboard | Live logs |
 |---|---|
-| ![Dashboard](docs/screenshot-dashboard.png) | ![Logs](docs/screenshot-logs.png) |
+| ![Dashboard](docs/screenshot-dashboard.png) — incl. the **Battery — hunting cost** panel with a real 4.4 h on-battery run | ![Logs](docs/screenshot-logs.png) |
 
 **Config editor** — every field has an ⓘ tooltip, bools are dropdowns, Telegram templates get click-to-insert placeholder chips and a **Send test** button:
 
@@ -38,6 +38,7 @@ Existing hunters (including the one this project replaced) are Termux scripts th
   - full configuration editor: bool fields as dropdowns, every field has an ⓘ tooltip, secrets masked
   - theme switcher (system / light / dark), inline SVG icons, zero external dependencies
 - **Telegram notifications** with editable templates (`{sum}`, `{capacity}`, `{ip}`, `{ocid}`, … — click-to-insert chips in the UI) and optional periodic summaries with a **Send test** button
+- **Hunter-attributed battery accounting**: while the phone is awake for a check (a window the hunter itself created), `current_now` is integrated into µAh per check — so the WebUI can show *the hunting cost alone* (µAh/check, mAh and % per 24 h, awake seconds) next to a whole-phone level chart, with charging and screen-on windows automatically excluded
 - Rotating log file, boot autostart, one-shot `-once` / `-validate` CLI modes
 
 ## Try it (no Go toolchain needed)

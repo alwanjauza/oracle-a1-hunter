@@ -5,32 +5,49 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.1] — 2026-10-25
+## [1.1.0] — 2026-10-25
+
+### Added
+
+- **Hunter-attributed battery accounting.** The phone is rarely dedicated to
+  hunting, so total %/h says nothing about the hunter's own cost. Instead,
+  `current_now` is sampled every ~200 ms while the phone is awake for a check
+  (a window the hunter itself created by waking the device) and integrated
+  into **µAh per check** — energy that is 100% attributable to hunting.
+  - Windows in which the **charger was connected** or the **screen was on**
+    are flagged and excluded from the attribution (that energy is not the
+    hunter's alone).
+  - WebUI: new **Battery — hunting cost** panel with per-check / 24 h cost
+    in µAh, mAh and % of battery, awake seconds and excluded-window count,
+    plus a 24 h level chart (charging zones shaded, line breaks where the
+    phone was off). The Battery card shows `hunt X%/24h · Y awake`.
+  - Level history and energy history persist across restarts and reboots
+    (bounded 720-entry rings, constant memory).
+  - `current_now` sign conventions are calibrated automatically per boot.
 
 ### Fixed
 
-- **Hunt silently stops after using "Check now"** (overnight freeze). Each sleep
-  cycle spawned a new blocking reader on the shared timerfd; returning through
-  the check-now control path left the previous reader alive, so the next cycle
-  had two readers racing for a single timer expiration — and the kernel wakes
-  only one. When the stale reader won, the active reader waited forever on a
-  disarmed timer (`it_value` `(0, 0)`), and no further attempts were made until
-  a human interacted with the WebUI again.
+- **Hunt silently stops after using "Check now"** (overnight freeze). Each
+  sleep cycle spawned a new blocking reader on the shared timerfd; returning
+  through the check-now control path left the previous reader alive, so the
+  next cycle had two readers racing for a single timer expiration — and the
+  kernel wakes only one. When the stale reader won, the active reader waited
+  forever on a disarmed timer (`it_value` `(0, 0)`), and no further attempts
+  were made until a human interacted with the WebUI again.
   `AlarmTimer.Cancel()` now fires a 1 ms fuse so a pending reader retires
   cleanly before the next cycle arms its own.
 
 ### Verified on-device (Redmi Note 8 Pro · AxionOS / Android 16 · KernelSU Next)
 
-- "Check now" → attempt fires → the **next 120 s cycle still fires** (the exact
-  scenario that froze 1.0.0; reproduced and re-tested twice).
-- timerfd confirmed armed after a check-now (~103 s remaining observed).
-- 429 backoff cadence (120 s × 1.5) intact; upgrade keeps the attempt counter
-  and statistics (`stats.json` is untouched by the binary swap).
-
-### Upgrade notes
-
-Replace the `hunter` binary and restart the service. Attempts continue from
-where they left off; no configuration changes are required.
+- "Check now" → attempt fires → the **next 120 s cycle still fires** (the
+  exact scenario that froze the previous build; re-tested twice).
+- 4.4 h on battery: 72 attributed checks (mean 36 µAh over a ~2.2 s window) =
+  **2.6 mAh ≈ 0.06% of battery**, while total phone drain was 23% — the
+  hunter accounted for 0.3% of it.
+- 56 checks that fell while the screen was on were correctly flagged and
+  excluded; 4 checks during charging likewise.
+- Battery rings survive a service restart; RSS flat at ~12 MB across 190+
+  checks (sampler goroutines do not leak).
 
 ## [1.0.0] — 2026-10-24
 
@@ -62,5 +79,5 @@ where they left off; no configuration changes are required.
 - Cross-builds published by GitHub Actions: android-arm64, linux-arm64,
   linux-amd64, plus SHA-256 checksums.
 
-[1.0.1]: https://github.com/alwanjauza/oracle-a1-hunter/releases/tag/v1.0.1
+[1.1.0]: https://github.com/alwanjauza/oracle-a1-hunter/releases/tag/v1.1.0
 [1.0.0]: https://github.com/alwanjauza/oracle-a1-hunter/releases/tag/v1.0.0

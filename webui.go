@@ -35,6 +35,7 @@ func NewWebUI(h *Hunter, log *Logger) *WebUI {
 	mux.HandleFunc("/api/logs/stream", w.auth(w.handleLogStream))
 	mux.HandleFunc("/api/config", w.auth(w.handleConfig))
 	mux.HandleFunc("/api/telegram/test", w.auth(w.handleTelegramTest))
+	mux.HandleFunc("/api/battery", w.auth(w.handleBattery))
 
 	port := 8080
 	h.mu.Lock()
@@ -142,21 +143,27 @@ func (w *WebUI) handleStatus(rw http.ResponseWriter, req *http.Request) {
 	h.mu.Unlock()
 
 	wifi, online := netState()
+	h.mu.Lock()
+	energyRing := append([]EnergySample(nil), h.energy...)
+	h.mu.Unlock()
+	br := readBatt()
 	resp := map[string]any{
-		"version":       version,
-		"state":         state,
-		"running":       running,
-		"stats":         st,
-		"recent":        recent,
-		"found":         found,
-		"target":        rt,
-		"battery":       batteryPct(),
-		"memoryMB":      rssMB(),
-		"wifi":          wifi,
-		"online":        online,
-		"now":           time.Now(),
-		"missing":       cfg.MissingCreds(h.baseDir),
-		"credsComplete": len(cfg.MissingCreds(h.baseDir)) == 0,
+		"version":         version,
+		"state":           state,
+		"running":         running,
+		"stats":           st,
+		"recent":          recent,
+		"found":           found,
+		"target":          rt,
+		"battery":         br.Pct,
+		"batteryCharging": br.Charging,
+		"huntEnergy":      huntEnergy24h(energyRing),
+		"memoryMB":        rssMB(),
+		"wifi":            wifi,
+		"online":          online,
+		"now":             time.Now(),
+		"missing":         cfg.MissingCreds(h.baseDir),
+		"credsComplete":   len(cfg.MissingCreds(h.baseDir)) == 0,
 		"settings": map[string]any{
 			"intervalBase":   cfg.IntervalBaseSecs,
 			"intervalJitter": cfg.IntervalJitterSecs,
@@ -166,6 +173,25 @@ func (w *WebUI) handleStatus(rw http.ResponseWriter, req *http.Request) {
 		},
 	}
 	writeJSON(rw, resp)
+}
+
+func (w *WebUI) handleBattery(rw http.ResponseWriter, req *http.Request) {
+	h := w.h
+	h.mu.Lock()
+	batt := append([]BattSample(nil), h.batt...)
+	energy := append([]EnergySample(nil), h.energy...)
+	h.mu.Unlock()
+	br := readBatt()
+	writeJSON(rw, map[string]any{
+		"level":      batt,
+		"energy":     energy,
+		"hunt":       huntEnergy24h(energy),
+		"battery":    br.Pct,
+		"charging":   br.Charging,
+		"currentMA":  br.MicroA / 1000,
+		"voltageMV":  br.MicroV / 1000,
+		"now":        time.Now().Unix(),
+	})
 }
 
 func (w *WebUI) handleControl(rw http.ResponseWriter, req *http.Request) {

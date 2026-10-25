@@ -89,6 +89,10 @@ type Hunter struct {
 	rtcWarned  bool
 
 	lastSummary time.Time
+
+	batt         []BattSample   // level ring for the context chart
+	energy       []EnergySample // per-check hunter-attributed cost ring
+	lastBattSave time.Time
 }
 
 var currentHunter *Hunter
@@ -239,6 +243,9 @@ func (h *Hunter) run(gen uint64) {
 			}
 			continue
 		}
+
+		// sample battery level for the context chart (cheap sysfs read)
+		h.sampleBattery()
 
 		// guard: battery
 		batt := batteryPct()
@@ -570,6 +577,11 @@ func (h *Hunter) fetchLimit(name string) float64 {
 // ---------- check ----------
 
 func (h *Hunter) doCheck() string {
+	// Attribute the battery cost of this awake window to the hunter: the
+	// sampler integrates current_now until doCheck returns (see battery.go).
+	es := startCheckEnergy()
+	defer func() { h.recordCheckEnergy(es.Finish()) }()
+
 	release := holdWake("check")
 	defer release()
 
@@ -956,8 +968,10 @@ func (h *Hunter) ApplyConfig(cfg *Config) {
 // ---------- stats persistence (survives reboots) ----------
 
 type statsFile struct {
-	Stats       Stats     `json:"stats"`
-	LastSummary time.Time `json:"last_summary"`
+	Stats       Stats          `json:"stats"`
+	LastSummary time.Time      `json:"last_summary"`
+	Batt        []BattSample   `json:"batt,omitempty"`
+	Energy      []EnergySample `json:"energy,omitempty"`
 }
 
 var statsPath string
@@ -971,16 +985,66 @@ func (h *Hunter) loadStats() {
 	if json.Unmarshal(data, &sf) == nil {
 		h.stats = sf.Stats
 		h.lastSummary = sf.LastSummary
+		if len(sf.Batt) > battRingMax {
+			sf.Batt = sf.Batt[len(sf.Batt)-battRingMax:]
+		}
+		h.batt = sf.Batt
+		if len(sf.Energy) > energyRingMax {
+			sf.Energy = sf.Energy[len(sf.Energy)-energyRingMax:]
+		}
+		h.energy = sf.Energy
 	}
 }
 
 func (h *Hunter) saveStats() {
 	h.mu.Lock()
-	sf := statsFile{Stats: h.stats, LastSummary: h.lastSummary}
+	sf := statsFile{
+		Stats:       h.stats,
+		LastSummary: h.lastSummary,
+		Batt:        append([]BattSample(nil), h.batt...),
+		Energy:      append([]EnergySample(nil), h.energy...),
+	}
 	h.mu.Unlock()
 	if data, err := json.Marshal(sf); err == nil {
-		_ = os.WriteFile(statsPath, data, 0o644)
+		// atomic replace: a crash mid-write must not corrupt the counters
+		tmp := statsPath + ".tmp"
+		if os.WriteFile(tmp, data, 0o644) == nil {
+			_ = os.Rename(tmp, statsPath)
+		}
 	}
+}
+
+// sampleBattery records one level point for the context chart. Appends at
+// most once a minute (or on any level/charging change); the ring is bounded.
+func (h *Hunter) sampleBattery() {
+	r := readBatt()
+	now := time.Now().Unix()
+	h.mu.Lock()
+	n := len(h.batt)
+	due := n == 0 || now-h.batt[n-1].T >= 60 || h.batt[n-1].Pct != r.Pct || h.batt[n-1].Chg != r.Charging
+	if due {
+		h.batt = append(h.batt, BattSample{T: now, Pct: r.Pct, Chg: r.Charging})
+		if len(h.batt) > battRingMax {
+			h.batt = h.batt[len(h.batt)-battRingMax:]
+		}
+	}
+	h.mu.Unlock()
+	if due && time.Since(h.lastBattSave) > 5*time.Minute {
+		h.lastBattSave = time.Now()
+		h.saveStats() // pause paths never reach the post-check save
+	}
+}
+
+func (h *Hunter) recordCheckEnergy(s EnergySample) {
+	if s.Secs <= 0 {
+		return
+	}
+	h.mu.Lock()
+	h.energy = append(h.energy, s)
+	if len(h.energy) > energyRingMax {
+		h.energy = h.energy[len(h.energy)-energyRingMax:]
+	}
+	h.mu.Unlock()
 }
 
 // rssMB reports the process resident set size in MB (from /proc/self/statm).
