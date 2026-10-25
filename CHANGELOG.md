@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Installable as a KernelSU / Magisk module.** `oracle-a1-hunter-v*-module.zip`
+  from the Releases page installs straight from the manager — no computer, no
+  terminal, nothing written to internal storage. The installer preserves any
+  existing configuration/history, migrates away a legacy `service.d` autostart,
+  starts the hunt immediately (no reboot) and prints the WebUI token. Data
+  stays in `/data/adb/oracle-hunter`, outside the module dir, so updates and
+  uninstalls never touch it; OTA updates are detected via `update.json`.
 - **Hunter-attributed battery accounting.** The phone is rarely dedicated to
   hunting, so total %/h says nothing about the hunter's own cost. Instead,
   `current_now` is sampled every ~200 ms while the phone is awake for a check

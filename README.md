@@ -41,16 +41,25 @@ Existing hunters (including the one this project replaced) are Termux scripts th
 - **Hunter-attributed battery accounting**: while the phone is awake for a check (a window the hunter itself created), `current_now` is integrated into µAh per check — so the WebUI can show *the hunting cost alone* (µAh/check, mAh and % per 24 h, awake seconds) next to a whole-phone level chart, with charging and screen-on windows automatically excluded
 - Rotating log file, boot autostart, one-shot `-once` / `-validate` CLI modes
 
-## Try it (no Go toolchain needed)
+## Install as a KernelSU/Magisk module (recommended)
 
-Grab a prebuilt binary from [**Releases**](../../releases) — `hunter-android-arm64` for phones, `hunter-linux-arm64`/`hunter-linux-amd64` for servers or SBCs — then follow the [Install](#install-rooted-android-kernelsu-or-magisk) steps below, skipping the build. A ready-made boot script lives at [`scripts/99-oracle-hunter.sh`](scripts/99-oracle-hunter.sh) and an annotated config template at [`config.env.example`](config.env.example). Version history: [`CHANGELOG.md`](CHANGELOG.md).
+The easiest path — no computer, no terminal, nothing written to internal storage:
 
-## Install (rooted Android, KernelSU or Magisk)
+1. Download `oracle-a1-hunter-v*-module.zip` from [**Releases**](../../releases) **on the phone**.
+2. Open **KernelSU / KernelSU Next / Magisk manager → Modules → Install from storage** and pick the zip.
+3. The installer preserves any existing configuration, removes a legacy `service.d` autostart if present, starts the hunter immediately and prints the WebUI token in the install log.
+4. Open `http://localhost:8080` on the phone, log in with the token (`AUTH_TOKEN` in `/data/adb/oracle-hunter/config.env`, also shown by the installer), fill in your OCI credentials on the **Config** tab — hunting starts automatically.
+
+Data (config, OCI key, stats, battery history, logs) lives in `/data/adb/oracle-hunter`, outside the module dir: updates and uninstalls never touch it. Module updates are detected automatically by the manager (OTA via `update.json`).
+
+## Manual install (advanced — servers, SBCs, non-arm64, or self-built binaries)
+
+Grab a prebuilt binary from [**Releases**](../../releases) (`hunter-android-arm64` for phones, `hunter-linux-*` for servers) or build your own, then follow the steps below. An annotated config template lives at [`config.env.example`](config.env.example). Version history: [`CHANGELOG.md`](CHANGELOG.md).
 
 Requirements: a rooted phone with `service.d` support (KernelSU, KernelSU Next, Magisk), an Oracle Cloud account (Always Free), and an ADB-connected computer to deploy.
 
 ```bash
-# 1. Build
+# 1. Build (phones need GOOS=android, not linux — see Troubleshooting)
 GOOS=android GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o hunter .
 
 # 2. Generate an API key pair and compute the fingerprint (MD5!)
@@ -61,20 +70,21 @@ openssl rsa -in oci_api_key.pem -pubout -outform DER | openssl md5
 # 3. Register the public key: Oracle Console → Profile → My profile →
 #    API keys → Add API key → Paste public key. The dialog shows the fingerprint.
 
-# 4. Deploy (push to /sdcard first — /data/adb is not adb-writable)
-adb push hunter /sdcard/hunter
-adb push oci_api_key.pem /sdcard/oci_api_key.pem
+# 4. Deploy (push to /data/local/tmp — keeps internal storage clean;
+#    /data/adb itself is not adb-writable)
+adb push hunter /data/local/tmp/oh/hunter
+adb push oci_api_key.pem /data/local/tmp/oh/oci_api_key.pem
 adb shell su -c 'mkdir -p /data/adb/oracle-hunter/bin /data/adb/oracle-hunter/logs'
-adb shell su -c 'cp /sdcard/hunter /data/adb/oracle-hunter/bin/ && chmod 755 /data/adb/oracle-hunter/bin/hunter'
-adb shell su -c 'cp /sdcard/oci_api_key.pem /data/adb/oracle-hunter/ && chmod 600 /data/adb/oracle-hunter/oci_api_key.pem'
+adb shell su -c 'cp /data/local/tmp/oh/hunter /data/adb/oracle-hunter/bin/ && chmod 755 /data/adb/oracle-hunter/bin/hunter'
+adb shell su -c 'cp /data/local/tmp/oh/oci_api_key.pem /data/adb/oracle-hunter/ && chmod 600 /data/adb/oracle-hunter/oci_api_key.pem'
 
 # 5. First run creates config.env with sane defaults; fill in credentials
 #    via the WebUI (recommended), or start from config.env.example.
 adb shell su -c '/data/adb/oracle-hunter/bin/hunter -validate -config /data/adb/oracle-hunter'
 
 # 6. Boot autostart — push scripts/99-oracle-hunter.sh from this repo:
-adb push scripts/99-oracle-hunter.sh /sdcard/99-oracle-hunter.sh
-adb shell su -c 'cp /sdcard/99-oracle-hunter.sh /data/adb/service.d/ && chmod 755 /data/adb/service.d/99-oracle-hunter.sh'
+adb push scripts/99-oracle-hunter.sh /data/local/tmp/oh/99-oracle-hunter.sh
+adb shell su -c 'cp /data/local/tmp/oh/99-oracle-hunter.sh /data/adb/service.d/ && chmod 755 /data/adb/service.d/99-oracle-hunter.sh'
 ```
 
 Open the WebUI from the phone (`http://localhost:8080`) or from a computer on the same network (`http://<phone-ip>:8080`). First-time login accepts the token via URL: `http://<phone-ip>:8080/#token=<AUTH_TOKEN from config.env>`; it is then remembered by the browser.

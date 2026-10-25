@@ -1,0 +1,6 @@
+{
+  "version": "v1.1.0",
+  "versionCode": 10100,
+  "zipUrl": "https://github.com/alwanjauza/oracle-a1-hunter/releases/download/v1.1.0/oracle-a1-hunter-v1.1.0-module.zip",
+  "changelog": "Battery cost tracking (hunter-attributed µAh), Check-now freeze fix, and first module release — install/update directly from the KernelSU/Magisk manager."
+}

@@ -1,0 +1,7 @@
+id=oracle_a1_hunter
+name=Oracle A1 Hunter
+version=v1.1.0
+versionCode=10100
+author=AlwanJauza
+description=Always Free Oracle Cloud A1 instance hunter — keeps calling LaunchInstance every 120 s until capacity appears. WebUI at http://localhost:8080 (token in /data/adb/oracle-hunter/config.env). Battery-aware: hunter-attributed µAh accounting. Root required.
+updateJson=https://raw.githubusercontent.com/alwanjauza/oracle-a1-hunter/main/module/update.json
