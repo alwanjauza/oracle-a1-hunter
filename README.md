@@ -89,6 +89,36 @@ adb shell su -c 'cp /data/local/tmp/oh/99-oracle-hunter.sh /data/adb/service.d/ 
 
 Open the WebUI from the phone (`http://localhost:8080`) or from a computer on the same network (`http://<phone-ip>:8080`). First-time login accepts the token via URL: `http://<phone-ip>:8080/#token=<AUTH_TOKEN from config.env>`; it is then remembered by the browser.
 
+## Uninstall & cleanup
+
+**Just want it to stop?** Press **Stop** in the WebUI — the process goes fully idle (no timers, no wake-ups) and you can press Start again whenever you like. Nothing needs to be uninstalled.
+
+**Regular uninstall** — KernelSU / Magisk manager → Modules → Oracle A1 Hunter → Uninstall, then reboot. This stops the process and removes the module files. Your data in `/data/adb/oracle-hunter` (config, OCI key, stats and battery history) is **intentionally kept** so a reinstall picks up where it left off.
+
+**Deep clean (full wipe)** — after uninstalling and rebooting:
+
+```bash
+# wipe the data dir (config, private key, stats, logs)
+adb shell su -c 'rm -rf /data/adb/oracle-hunter'
+```
+
+or run the same `rm -rf` from any root terminal app on the phone (`su` first). If you used the manual install path, also remove its staging dir and boot script:
+
+```bash
+adb shell su -c 'rm -rf /data/local/tmp/oh'
+adb shell su -c 'rm -f /data/adb/service.d/99-oracle-hunter.sh'
+```
+
+**Verify nothing is left:**
+
+```bash
+adb shell su -c 'pgrep -f oracle-hunter; ls /data/adb/oracle-hunter'
+```
+
+Empty output plus a "No such file or directory" for the directory means the phone is completely clean.
+
+Anything outside the phone — for example the API key registered in your Oracle Console profile — is managed from the Console itself and is out of this project's reach.
+
 ## Configuration
 
 Everything lives in `config.env` (also editable from the WebUI). Highlights:
